@@ -2,8 +2,12 @@
 
 import os
 import requests
+from dotenv import load_dotenv
 
-# Load the environment variables
+# Load environment variables from .env file
+load_dotenv("/root/expense-tracker-automation/.env")  # Adjust path if needed
+
+# Retrieve environment variables
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 webhook_url = os.getenv("TELEGRAM_WEBHOOK_URL")
 
