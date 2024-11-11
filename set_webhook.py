@@ -4,8 +4,8 @@ import os
 import requests
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv("/root/expense-tracker-automation/.env")  # Adjust path if needed
+# Load environment variables from a specified .env file path
+load_dotenv("/root/expense-tracker-automation/.env")
 
 # Retrieve environment variables
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
