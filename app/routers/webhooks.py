@@ -16,7 +16,9 @@ redis_client = redis.from_url(redis_url)
 
 async def get_user_stage(chat_id: str):
     try:
-        return await redis_client.hget(chat_id, "stage") or "waiting_for_receipt"
+        stage = await redis_client.hget(chat_id, "stage") or "waiting_for_receipt"
+        logger.info(f"User {chat_id} stage retrieved from Redis: {stage}")
+        return stage
     except Exception as e:
         logger.error(f"Error retrieving stage for user {chat_id}: {e}")
         return "waiting_for_receipt"
@@ -47,10 +49,12 @@ async def receive_telegram_webhook(request: Request):
                         await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите нам {HELP_LINK}.")
                         return {"status": "failed", "message": "Duplicate receipt number"}
 
+                    # Set stage to "waiting_for_phone_number" and save the receipt number
                     await redis_client.hset(chat_id, mapping={
                         "stage": "waiting_for_phone_number",
                         "receipt_number": receipt_number
                     })
+                    logger.info(f"User {chat_id} moved to stage: waiting_for_phone_number with receipt number: {receipt_number}")
                     await telegram_bot.send_message(chat_id, "Пожалуйста, напишите номер телефона, который участвует в розыгрыше в формате 77023334455")
                     return {"status": "success", "message": "Phone number request sent"}
                 else:
@@ -67,6 +71,7 @@ async def receive_telegram_webhook(request: Request):
         try:
             await redis_client.hset(chat_id, "phone_number", text)
             await redis_client.hset(chat_id, "stage", "waiting_for_device")
+            logger.info(f"User {chat_id} moved to stage: waiting_for_device with phone number: {text}")
             await telegram_bot.send_message(chat_id, "Напишите, пожалуйста, модель вашего телефона. Например: 'iPhone 16 Pro Max'")
             return {"status": "success", "message": "Device model request sent"}
         except Exception as e:
@@ -99,6 +104,7 @@ async def receive_telegram_webhook(request: Request):
                         )
                         await telegram_bot.send_message(chat_id, f"Спасибо! Ваш код активации: {activation_code_entry.code}")
                         await redis_client.delete(chat_id)
+                        logger.info(f"User {chat_id} activation complete and Redis state cleared")
                         return {"status": "success", "message": "Activation code sent"}
                 except Exception as e:
                     logger.error(f"Error assigning activation code for user {chat_id}: {e}")
@@ -108,6 +114,7 @@ async def receive_telegram_webhook(request: Request):
             return {"status": "failed", "message": "Internal error during device storage"}
 
     else:
+        # Handle unexpected inputs based on the current stage
         if user_stage == "waiting_for_phone_number":
             await telegram_bot.send_message(chat_id, "Пожалуйста, укажите номер телефона в формате 77023334455.")
         elif user_stage == "waiting_for_device":
