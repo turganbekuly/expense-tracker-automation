@@ -1,0 +1,24 @@
+[0;1;32m●[0m stobaksoff.service - Gunicorn instance to serve FastAPI app
+     Loaded: loaded (/etc/systemd/system/stobaksoff.service; enabled; vendor preset: enabled)
+     Active: [0;1;32mactive (running)[0m since Tue 2024-11-12 05:29:49 UTC; 3s ago
+    Process: 65076 ExecStartPre=/root/expense-tracker-automation/venv/bin/python /root/expense-tracker-automation/set_webhook.py (code=exited, status=0/SUCCESS)
+   Main PID: 65091 (gunicorn)
+      Tasks: 9 (limit: 4677)
+     Memory: 663.4M
+     CGroup: /system.slice/stobaksoff.service
+             ├─65091 /root/expense-tracker-automation/venv/bin/python3 /root/expense-tracker-automation/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+             ├─65094 /root/expense-tracker-automation/venv/bin/python3 /root/expense-tracker-automation/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+             ├─65095 /root/expense-tracker-automation/venv/bin/python3 /root/expense-tracker-automation/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+             ├─65096 /root/expense-tracker-automation/venv/bin/python3 /root/expense-tracker-automation/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+             └─65097 /root/expense-tracker-automation/venv/bin/python3 /root/expense-tracker-automation/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+
+Nov 12 05:29:48 ubuntu-s-2vcpu-4gb-amd-sgp1-01 python[65076]: Python-dotenv could not parse statement starting at line 10
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 python[65076]: Failed to set webhook: 400, {"ok":false,"error_code":400,"description":"Bad Request: bad webhook: An HTTPS URL must be provided for webhook"}
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 systemd[1]: Started Gunicorn instance to serve FastAPI app.
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65091]: [2024-11-12 05:29:49 +0000] [65091] [INFO] Starting gunicorn 23.0.0
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65091]: [2024-11-12 05:29:49 +0000] [65091] [INFO] Listening at: http://127.0.0.1:8000 (65091)
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65091]: [2024-11-12 05:29:49 +0000] [65091] [INFO] Using worker: uvicorn.workers.UvicornWorker
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65094]: [2024-11-12 05:29:49 +0000] [65094] [INFO] Booting worker with pid: 65094
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65095]: [2024-11-12 05:29:49 +0000] [65095] [INFO] Booting worker with pid: 65095
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65096]: [2024-11-12 05:29:49 +0000] [65096] [INFO] Booting worker with pid: 65096
+Nov 12 05:29:49 ubuntu-s-2vcpu-4gb-amd-sgp1-01 gunicorn[65097]: [2024-11-12 05:29:49 +0000] [65097] [INFO] Booting worker with pid: 65097
