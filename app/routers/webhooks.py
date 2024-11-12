@@ -33,10 +33,9 @@ async def receive_telegram_webhook(request: Request):
             receipt_text = ocr_service.process_receipt(file_path)
             is_valid, validation_message, receipt_number = ocr_service.validate_receipt(receipt_text)
 
-            # Step 2: If the receipt is valid, check if the receipt number is unique
             if is_valid:
                 if receipt_number and not await activation_code_service.is_activation_code_available(receipt_number):
-                    await telegram_bot.send_message(chat_id, f"Duplicate receipt. Please provide a unique receipt or contact us at {HELP_LINK}.")
+                    await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите нам {HELP_LINK}.")
                     return {"status": "failed", "message": "Duplicate receipt number"}
 
                 # Save receipt number and advance to the next step
@@ -44,20 +43,20 @@ async def receive_telegram_webhook(request: Request):
                     "stage": "waiting_for_phone_number",
                     "receipt_number": receipt_number
                 })
-                await telegram_bot.send_message(chat_id, "Please enter your phone number in the format 77023334455")
+                await telegram_bot.send_message(chat_id, "Пожалуйста, напишите номер телефона, который участвует в розыгрыше в формате 77023334455")
                 return {"status": "success", "message": "Phone number request sent"}
             else:
-                await telegram_bot.send_message(chat_id, f"Invalid receipt. Please re-upload or contact support at {HELP_LINK}.")
+                await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите нам {HELP_LINK}.")
                 return {"status": "failed", "message": validation_message}
         else:
-            await telegram_bot.send_message(chat_id, "Please send a PDF receipt.")
+            await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF.")
             return {"status": "waiting", "message": "Awaiting receipt upload"}
 
     # Step 3: Collect user phone number
     elif user_stage == "waiting_for_phone_number" and text and text.startswith("77"):
         await redis_client.hset(chat_id, "phone_number", text)
         await redis_client.hset(chat_id, "stage", "waiting_for_device")
-        await telegram_bot.send_message(chat_id, "Please enter your phone model, e.g., 'iPhone 16 Pro Max'")
+        await telegram_bot.send_message(chat_id, "Напишите, пожалуйста, модель вашего телефона. Например: 'iPhone 16 Pro Max'")
         return
 
     # Step 4: Collect device model and finalize
@@ -75,7 +74,7 @@ async def receive_telegram_webhook(request: Request):
             
             if not activation_code_entry:
                 print("No activation codes available")
-                await telegram_bot.send_message(chat_id, "Sorry, all activation codes have been used.")
+                await telegram_bot.send_message(chat_id, "Извините, все коды активации были использованы.")
                 return {"status": "failed", "message": "No activation codes available"}
 
             # Attempt to assign activation code in a transaction
@@ -89,7 +88,7 @@ async def receive_telegram_webhook(request: Request):
                         activation_code_entry.code, phone_number, device, receipt_number
                     )
                     print(f"Google Sheet appended with code {activation_code_entry.code}")
-                    await telegram_bot.send_message(chat_id, f"Thank you! Your activation code: {activation_code_entry.code}")
+                    await telegram_bot.send_message(chat_id, f"Спасибо! Ваш код активации: {activation_code_entry.code}")
                     
                     # Clear user state from Redis after successful save
                     await redis_client.delete(chat_id)
@@ -98,11 +97,10 @@ async def receive_telegram_webhook(request: Request):
                 print(f"Error assigning activation code: {e}")
 
     else:
-        # Handle unexpected inputs based on the current stage
         if user_stage == "waiting_for_phone_number":
-            await telegram_bot.send_message(chat_id, "Please provide your phone number in the format 77023334455.")
+            await telegram_bot.send_message(chat_id, "Пожалуйста, укажите номер телефона в формате 77023334455.")
         elif user_stage == "waiting_for_device":
-            await telegram_bot.send_message(chat_id, "Please specify your phone model.")
+            await telegram_bot.send_message(chat_id, "Пожалуйста, укажите модель вашего телефона.")
         else:
-            await telegram_bot.send_message(chat_id, "Please send a PDF receipt.")
+            await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF.")
         return {"status": "waiting", "message": "Awaiting correct input"}
