@@ -59,7 +59,7 @@ async def receive_telegram_webhook(request: Request):
                 print(f"Error processing receipt for user {chat_id}: {e}")
                 return {"status": "failed", "message": "Internal error during receipt processing"}
 
-        await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF.")
+        await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF 1.")
         return {"status": "waiting", "message": "Awaiting receipt upload"}
 
     # Step 2: Collect user phone number
@@ -124,5 +124,5 @@ async def receive_telegram_webhook(request: Request):
         elif user_stage == "waiting_for_device":
             await telegram_bot.send_message(chat_id, "Пожалуйста, укажите модель вашего телефона.")
         else:
-            await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF.")
+            await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF 2.")
         return {"status": "waiting", "message": "Awaiting correct input"}
