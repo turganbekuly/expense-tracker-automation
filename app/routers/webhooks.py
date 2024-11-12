@@ -35,6 +35,10 @@ async def receive_telegram_webhook(request: Request):
         if photo or (document and document["mime_type"] == "application/pdf"):
             try:
                 file_id = document["file_id"]
+                if not file_id:
+                    await telegram_bot.send_message(chat_id, "Ошибка: документ не содержит файл.")
+                    return {"status": "failed", "message": "Document has no file_id"}
+
                 file_path = await telegram_bot.download_file(file_id)
                 receipt_text = ocr_service.process_receipt(file_path)
                 is_valid, validation_message, receipt_number = ocr_service.validate_receipt(receipt_text)
@@ -57,6 +61,7 @@ async def receive_telegram_webhook(request: Request):
                     return {"status": "failed", "message": validation_message}
             except Exception as e:
                 print(f"Error processing receipt for user {chat_id}: {e}")
+                await telegram_bot.send_message(chat_id, f"Внутренняя ошибка при обработке чека: {str(e)}")
                 return {"status": "failed", "message": "Internal error during receipt processing"}
 
         await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF 1.")
