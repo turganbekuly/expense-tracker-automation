@@ -53,7 +53,7 @@ async def receive_telegram_webhook(request: Request):
                 if is_valid:
                     # Check for duplicate receipt number
                     if receipt_number and not await activation_code_service.is_activation_code_available(receipt_number):
-                        await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите нам {HELP_LINK}.")
+                        await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите 1 нам {HELP_LINK}.")
                         return {"status": "failed", "message": "Duplicate receipt number"}
 
                     # Save receipt number and advance to "waiting_for_phone_number" stage
@@ -64,7 +64,7 @@ async def receive_telegram_webhook(request: Request):
                     await telegram_bot.send_message(chat_id, "Пожалуйста, напишите номер телефона, который участвует в розыгрыше в формате 77023334455")
                     return {"status": "success", "message": "Phone number request sent"}
                 else:
-                    await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите нам {HELP_LINK}.")
+                    await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите 2 нам {HELP_LINK}.")
                     return {"status": "failed", "message": validation_message}
             except Exception as e:
                 print(f"Error processing receipt for user {chat_id}: {e}")
