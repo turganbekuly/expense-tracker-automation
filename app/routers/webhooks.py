@@ -1,23 +1,26 @@
 # app/routers/webhooks.py
 from fastapi import APIRouter, Request
 from app.services import ocr_service, google_sheet, telegram_bot, activation_code_service
+import aioredis
 
 router = APIRouter()
 
 # Temporary in-memory storage for tracking user progress
 user_state = {}
 HELP_LINK = "https://wa.me/77064302140"
+redis = aioredis.from_url("redis://localhost")
 
 @router.post("/webhook")
 async def receive_telegram_webhook(request: Request):
     data = await request.json()
     message = data.get("message", {})
-    chat_id = message.get("chat", {}).get("id")
+    chat_id = str(message.get("chat", {}).get("id"))  # Convert chat_id to string for Redis keys
     text = message.get("text")
     photo = message.get("photo")
     document = message.get("document")
 
-    user_stage = user_state.get(chat_id, {}).get("stage", "waiting_for_receipt")
+    # Get user stage from Redis, or default to "waiting_for_receipt"
+    user_stage = await redis.hget(chat_id, "stage") or "waiting_for_receipt"
 
     # Step 1: Process PDF receipt and validate uniqueness of receipt number
     if user_stage == "waiting_for_receipt":
@@ -34,10 +37,10 @@ async def receive_telegram_webhook(request: Request):
                     return {"status": "failed", "message": "Duplicate receipt number"}
 
                 # Save receipt number and advance to the next step
-                user_state[chat_id] = {
+                await redis.hset(chat_id, mapping={
                     "stage": "waiting_for_phone_number",
-                    "receipt_number": receipt_number  # Save receipt number in user state
-                }
+                    "receipt_number": receipt_number
+                })
                 await telegram_bot.send_message(chat_id, "Пожалуйста, напишите номер телефона, который участвует в розыгрыше в формате 77023334455")
                 return {"status": "success", "message": "Phone number request sent"}
             else:
@@ -47,27 +50,28 @@ async def receive_telegram_webhook(request: Request):
             await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF.")
             return {"status": "waiting", "message": "Awaiting receipt upload"}
 
-    # Step 3: Collect user information (phone number and device model)
+    # Step 3: Collect user phone number
     elif user_stage == "waiting_for_phone_number" and text and text.startswith("77"):
-        user_state[chat_id]["phone_number"] = text
-        user_state[chat_id]["stage"] = "waiting_for_device"
+        await redis.hset(chat_id, "phone_number", text)
+        await redis.hset(chat_id, "stage", "waiting_for_device")
         await telegram_bot.send_message(chat_id, "Напишите, пожалуйста, модель вашего телефона. Например: 'iPhone 16 Pro Max'")
         return
 
+    # Step 4: Collect device model and finalize
     elif user_stage == "waiting_for_device" and text:
-        # Store device info
-        user_state[chat_id]["device"] = text
-        receipt_number = user_state[chat_id].get("receipt_number")
-        phone_number = user_state[chat_id].get("phone_number")
-        device = user_state[chat_id].get("device")
+        # Store device info and retrieve user state data
+        await redis.hset(chat_id, "device", text)
+        receipt_number = await redis.hget(chat_id, "receipt_number")
+        phone_number = await redis.hget(chat_id, "phone_number")
+        device = await redis.hget(chat_id, "device")
 
-        # Step 4: Find an available row and confirm its availability
+        # Find an available activation code
         while True:
             print("Fetching an available activation code")  # Debugging
             activation_code_entry = await activation_code_service.get_unused_activation_code()
             
             if not activation_code_entry:
-                print("No activation codes available")  # Debugging
+                print("No activation codes available")
                 await telegram_bot.send_message(chat_id, "Извините, все коды активации были использованы.")
                 return {"status": "failed", "message": "No activation codes available"}
 
@@ -83,14 +87,14 @@ async def receive_telegram_webhook(request: Request):
                     )
                     print(f"Google Sheet appended with code {activation_code_entry.code}")
 
-                    print("Activation code successfully assigned")  # Debugging
+                    print("Activation code successfully assigned")
                     await telegram_bot.send_message(chat_id, f"Спасибо! Ваш код активации: {activation_code_entry.code}")
                     
-                    # Clear user state after successful save
-                    del user_state[chat_id]
+                    # Clear user state from Redis after successful save
+                    await redis.delete(chat_id)
                     return {"status": "success", "message": "Activation code sent"}
             except Exception as e:
-                print(f"Error assigning activation code: {e}")  # Debugging
+                print(f"Error assigning activation code: {e}")
                 # Retry in case of error due to concurrent access
 
     else:
