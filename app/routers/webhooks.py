@@ -9,19 +9,31 @@ HELP_LINK = "https://wa.me/77064302140"
 redis_url = os.getenv("REDIS_URL", "redis://localhost")
 redis_client = redis.from_url(redis_url)
 
-async def get_user_stage(chat_id: str):
+async def get_user_stage(chat_id):
     """Fetch the user stage from Redis, defaulting to 'waiting_for_receipt' if not set."""
-    return await redis_client.hget(chat_id, "stage") or "waiting_for_receipt"
+    try:
+        # Ensure chat_id is treated as a string for Redis
+        chat_id_str = str(chat_id)
+        stage = await redis_client.hget(chat_id_str, "stage")
+        return stage.decode() if stage else "waiting_for_receipt"
+    except Exception as e:
+        print(f"Error fetching user stage for {chat_id}: {e}")
+        return "waiting_for_receipt"
 
-async def set_user_stage(chat_id: str, stage: str):
+async def set_user_stage(chat_id, stage):
     """Set the user's current stage in Redis."""
-    await redis_client.hset(chat_id, "stage", stage)
+    try:
+        # Ensure chat_id is treated as a string for Redis
+        chat_id_str = str(chat_id)
+        await redis_client.hset(chat_id_str, "stage", stage)
+    except Exception as e:
+        print(f"Error setting user stage for {chat_id}: {e}")
 
 @router.post("/webhook")
 async def receive_telegram_webhook(request: Request):
     data = await request.json()
     message = data.get("message", {})
-    chat_id = str(message.get("chat", {}).get("id"))  # Convert chat_id to string for Redis keys
+    chat_id = message.get("chat", {}).get("id")
     text = message.get("text")
     photo = message.get("photo")
     document = message.get("document")
@@ -35,10 +47,6 @@ async def receive_telegram_webhook(request: Request):
         if photo or (document and document["mime_type"] == "application/pdf"):
             try:
                 file_id = document["file_id"]
-                if not file_id:
-                    await telegram_bot.send_message(chat_id, "Ошибка: документ не содержит файл.")
-                    return {"status": "failed", "message": "Document has no file_id"}
-
                 file_path = await telegram_bot.download_file(file_id)
                 receipt_text = ocr_service.process_receipt(file_path)
                 is_valid, validation_message, receipt_number = ocr_service.validate_receipt(receipt_text)
