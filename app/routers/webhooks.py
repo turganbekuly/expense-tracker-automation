@@ -6,7 +6,7 @@ import os
 router = APIRouter()
 
 HELP_LINK = "https://wa.me/77064302140"
-redis_client = redis.asyncio.from_url("redis://localhost", encoding="utf-8", decode_responses=True)
+redis_client = redis.from_url("redis://localhost", encoding="utf-8", decode_responses=True)
 
 async def get_user_stage(chat_id):
     """Fetch the user stage from Redis, defaulting to 'waiting_for_receipt' if not set."""
