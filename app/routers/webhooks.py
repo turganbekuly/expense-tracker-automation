@@ -123,6 +123,8 @@ async def receive_telegram_webhook(request: Request):
             await telegram_bot.send_message(chat_id, "Пожалуйста, укажите номер телефона в формате 77023334455.")
         elif user_stage == "waiting_for_device":
             await telegram_bot.send_message(chat_id, "Пожалуйста, укажите модель вашего телефона.")
-        else:
+        elif user_stage == "waiting_for_receipt":
             await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF 2.")
+        else:
+            await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF 3.")
         return {"status": "waiting", "message": "Awaiting correct input"}
