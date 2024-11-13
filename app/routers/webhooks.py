@@ -6,7 +6,7 @@ import os
 router = APIRouter()
 
 HELP_LINK = "https://wa.me/77064302140"
-redis_client = redis.from_url("redis://localhost", encoding="utf-8", decode_responses=True)
+redis_client = redis.from_url("redis://localhost:6379", encoding="utf-8", decode_responses=True)
 
 async def get_user_stage(chat_id):
     """Fetch the user stage from Redis, defaulting to 'waiting_for_receipt' if not set."""
@@ -14,7 +14,8 @@ async def get_user_stage(chat_id):
         # Ensure chat_id is treated as a string for Redis
         chat_id_str = str(chat_id)
         stage = await redis_client.hget(chat_id_str, "stage")
-        return stage.decode() if stage else "waiting_for_receipt"
+        print(f"method stage: {stage}")
+        return stage if stage else "waiting_for_receipt"
     except Exception as e:
         print(f"Error fetching user stage for {chat_id}: {e}")
         return "waiting_for_receipt"
@@ -62,6 +63,7 @@ async def receive_telegram_webhook(request: Request):
                         "stage": "waiting_for_phone_number",
                         "receipt_number": receipt_number
                     })
+                    print(f"Got validation result {is_valid} {validation_message} {receipt_number} in stage: {user_stage}")
                     await telegram_bot.send_message(chat_id, "Пожалуйста, напишите номер телефона, который участвует в розыгрыше в формате 77023334455")
                     return {"status": "success", "message": "Phone number request sent"}
                 else:
