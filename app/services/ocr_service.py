@@ -79,9 +79,10 @@ def process_receipt(pdf_path):
 def validate_receipt(text):
     # Step 1: Check for the Amount
     if not any(amount in text for amount in EXPECTED_AMOUNT_OPTIONS):
-        amount_match = re.search(r"2[ ,]?900 ?₸?", text)
-        if not amount_match:
-            return False, "Чек не прошел проверку суммы", None
+       if re.search(r"2[ ,]?900 ?₸?", text):
+        return True, "Valid amount", None
+    else:
+        return False, "Чек не прошел проверку суммы", None
 
     # Step 2: Match and Extract the Date
     date_match = re.search(

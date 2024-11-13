@@ -45,11 +45,12 @@ async def receive_telegram_webhook(request: Request):
     if user_stage == "waiting_for_receipt":
         if photo or (document and document["mime_type"] == "application/pdf"):
             try:
+                print(f"Got file in stage: {user_stage}")
                 file_id = document["file_id"]
                 file_path = await telegram_bot.download_file(file_id)
                 receipt_text = ocr_service.process_receipt(file_path)
                 is_valid, validation_message, receipt_number = ocr_service.validate_receipt(receipt_text)
-
+                print(f"Got validation result {is_valid} {validation_message} {receipt_number} in stage: {user_stage}")
                 if is_valid:
                     # Check for duplicate receipt number
                     if receipt_number and not await activation_code_service.is_activation_code_available(receipt_number):
