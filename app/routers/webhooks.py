@@ -71,7 +71,7 @@ async def receive_telegram_webhook(request: Request):
                     return {"status": "failed", "message": validation_message}
             except Exception as e:
                 print(f"Error processing receipt for user {chat_id}: {e}")
-                await telegram_bot.send_message(chat_id, f"Внутренняя ошибка при обработке чека: {str(e)}")
+                await telegram_bot.send_message(chat_id, f"Пожалуйста, отправьте корректный чек или напишите нам {HELP_LINK}.")
                 return {"status": "failed", "message": "Internal error during receipt processing"}
 
         await telegram_bot.send_message(chat_id, "Пожалуйста, отправьте чек в формате PDF.")
