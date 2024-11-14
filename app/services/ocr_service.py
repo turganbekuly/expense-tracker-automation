@@ -77,12 +77,13 @@ def process_receipt(pdf_path):
     return text  # Return directly extracted text if available
 
 def validate_receipt(text):
-    # Step 1: Check for the Amount
+    # First, check for exact matches in EXPECTED_AMOUNT_OPTIONS
     if not any(amount in text for amount in EXPECTED_AMOUNT_OPTIONS):
-       if re.search(r"1[ ,]?999 ?₸?", text):
-        return True, "Valid amount", None
-    else:
-        return False, "Чек не прошел проверку суммы", None
+        # If not found, apply a strict regex for variations of 1999 only
+        if re.search(r"\b1[ ,]?999 ₸\b", text):  # Strictly matching "1999" with allowed spaces or commas
+            return True, "Valid amount", None
+        else:
+            return False, "Чек не прошел проверку суммы", None
 
     # Step 2: Match and Extract the Date
     date_match = re.search(
@@ -105,7 +106,7 @@ def validate_receipt(text):
 
     # Check if the transaction date is within ±30 days of the current date
     current_date = datetime.now()
-    if not (current_date - timedelta(days=30) <= transaction_date <= current_date + timedelta(days=30)):
+    if not (current_date - timedelta(days=2) <= transaction_date <= current_date + timedelta(days=2)):
         return False, "Чек не прошел проверку даты", None
 
     # Step 3: Extract Receipt Number
