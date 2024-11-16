@@ -29,22 +29,66 @@ async def set_user_stage(chat_id, stage):
     except Exception as e:
         print(f"Error setting user stage for {chat_id}: {e}")
 
+async def store_user(chat_id):
+    try:
+        await redis_client.sadd("bot_users", chat_id)
+    except Exception as e:
+        print(f"Error storing user {chat_id}: {e}")
+
+async def broadcast_message(message):
+    """Broadcast a custom message to all bot users."""
+    try:
+        # Get all stored chat_ids from Redis
+        user_ids = await redis_client.smembers("bot_users")
+
+        # Send the message to all users
+        for chat_id in user_ids:
+            try:
+                await telegram_bot.send_message(chat_id, message)
+                print(f"Message sent to user {chat_id}")
+            except Exception as e:
+                print(f"Error sending message to user {chat_id}: {e}")
+
+    except Exception as e:
+        print(f"Error broadcasting message: {e}")
+
+
+@router.post("/broadcast")
+async def broadcast(request: Request):
+    try:
+        data = await request.json()
+        message = data.get("message")
+        
+        if not message:
+            return {"status": "failed", "message": "No message provided for broadcast."}
+
+        await broadcast_message(message)
+        return {"status": "success", "message": "Broadcast sent successfully"}
+    except Exception as e:
+        print(f"Error broadcasting message: {e}")
+        return {"status": "failed", "message": f"Internal error during broadcast: {e}"}
+
 @router.post("/webhook")
 async def receive_telegram_webhook(request: Request):
     data = await request.json()
     message = data.get("message", {})
     chat_id = message.get("chat", {}).get("id")
     text = message.get("text")
-    photo = message.get("photo")
     document = message.get("document")
+
+    if text == "/start":
+        await telegram_bot.send_message(chat_id, "Добро пожаловать! Я помогу вам проверить чеки. Пожалуйста, отправьте чек в формате PDF, чтобы начать.")
+        return {"status": "success", "message": "Start message sent"}
 
     # Retrieve the current user stage from Redis
     user_stage = await get_user_stage(chat_id)
     print(f"User {chat_id} is in stage: {user_stage}")
 
+    await store_user(chat_id)
+
     # Step 1: Process PDF receipt and validate uniqueness of receipt number
     if user_stage == "waiting_for_receipt":
-        if photo or (document and document["mime_type"] == "application/pdf"):
+        if (document and document["mime_type"] == "application/pdf"):
             try:
                 print(f"Got file in stage: {user_stage}")
                 file_id = document["file_id"]
