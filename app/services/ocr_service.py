@@ -10,7 +10,7 @@ import fitz
 import torch
 
 # Expected amount options to match different OCR formats
-EXPECTED_AMOUNT_OPTIONS = ["1 999 ₸", "1999 ₸", "1,999 ₸"]
+EXPECTED_AMOUNT_OPTIONS = ["4 99 ₸", "499 ₸", "4,99 ₸"]
 DATE_FORMAT = "%d.%m.%Y %H:%M:%S"
 
 # Initialize EasyOCR reader for Russian language
@@ -79,8 +79,8 @@ def process_receipt(pdf_path):
 def validate_receipt(text):
     # First, check for exact matches in EXPECTED_AMOUNT_OPTIONS
     if not any(amount in text for amount in EXPECTED_AMOUNT_OPTIONS):
-        # If not found, apply a strict regex for variations of 1999 only
-        if re.search(r"\b1[ ,]?999 ₸\b", text):  # Strictly matching "1999" with allowed spaces or commas
+        # If not found, apply a strict regex for variations of 499 only
+        if re.search(r"\b4[ ,]?99 ₸\b", text):  # Strictly matching "499" with allowed spaces or commas
             return True, "Valid amount", None
         else:
             return False, "Чек не прошел проверку суммы", None
